@@ -42,4 +42,3 @@ This Flask-based web app provides a beautiful, responsive interface for users to
    ```bash
    python app.py
    ```
-# Ubair-s-AI-Prompt-Generator
