@@ -5,6 +5,7 @@ Transform simple ideas into rich, detailed prompts using AI — powered by OpenR
 This Flask-based web app provides a beautiful, responsive interface for users to input basic ideas and instantly receive enhanced, AI-optimized prompts based on a custom structure.
 
 Check it out on render (might take some time to boot up cos free plan 🥲 )-:
+
 (https://ubair-s-ai-prompt-generator.onrender.com)
 ---
 
