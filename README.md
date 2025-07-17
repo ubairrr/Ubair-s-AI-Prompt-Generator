@@ -3,7 +3,8 @@
 Transform simple ideas into rich, detailed prompts using AI — powered by OpenRouter's DeepSeek R1 API.
 
 This Flask-based web app provides a beautiful, responsive interface for users to input basic ideas and instantly receive enhanced, AI-optimized prompts based on a custom structure.
-
+Check it out on render (might take some time to boot up cos free plan 🥲 )-:
+[text](https://ubair-s-ai-prompt-generator.onrender.com)
 ---
 
 ### 🚀 Features
@@ -13,6 +14,9 @@ This Flask-based web app provides a beautiful, responsive interface for users to
 * 🤖 Integrated with OpenRouter (DeepSeek R1)
 * 📋 Copy-to-clipboard functionality
 * 💡 Tip section to guide users
+
+### 📸 Snapshots
+![App Screenshot](assets/screenshot.png)
 
 
 ### 🛠 Setup Instructions
