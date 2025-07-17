@@ -91,17 +91,6 @@
           <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('idea').value = ''">Clear All</button>
         </div>
       </div>
-
-      <div class="card">
-        <h5>✨ Enhanced Prompt</h5>
-        <p>Your optimized, detailed prompt ready for AI systems</p>
-        <label for="result">Generated Prompt</label>
-        <textarea id="result" readonly placeholder="Your enhanced prompt will appear here...">{{ result or '' }}</textarea>
-        <div class="button-group">
-          <button type="button" class="btn btn-outline-secondary btn-icon" onclick="copyPrompt()">
-            📋 Copy to Clipboard
-          </button>
-        </div>
       </div>
     </div>
   </form>
@@ -116,14 +105,5 @@
       <li>Reference specific artists, techniques, or examples if relevant</li>
     </ul>
   </div>
-
-  <script>
-    function copyPrompt() {
-      const promptText = document.getElementById("result").value;
-      navigator.clipboard.writeText(promptText)
-        .then(() => alert("✅ Prompt copied to clipboard!"))
-        .catch(err => alert("❌ Failed to copy: " + err));
-    }
-  </script>
 </body>
 </html>
