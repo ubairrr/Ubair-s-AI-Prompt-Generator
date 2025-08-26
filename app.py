@@ -124,7 +124,7 @@ def index():
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "deepseek/deepseek-chat-v3-0324:free",
+                    "model": "deepseek/deepseek-r1-0528:free",
                     "messages": [
                         {"role": "system", "content": "You are a helpful AI that formats user ideas into structured prompts."},
                         {"role": "user", "content": prompt}
