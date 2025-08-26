@@ -121,12 +121,14 @@ def index():
                 url="https://openrouter.ai/api/v1/chat/completions",
                 headers={
                     "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://ubair-s-ai-prompt-generator.onrender.com",
+                    "X-Title": "Ubair's PromptGen",
                 },
                 json={
-                    "model": "deepseek/deepseek-r1-0528:free",
+                    "model": "google/gemini-2.0-flash-exp:free",
                     "messages": [
-                        {"role": "system", "content": "You are a helpful AI that formats user ideas into structured prompts."},
+                        {"role": "system", "content": "You are a helpful AI that formats user ideas into structured prompts using the given instructions."},
                         {"role": "user", "content": prompt}
                     ]
                 }
