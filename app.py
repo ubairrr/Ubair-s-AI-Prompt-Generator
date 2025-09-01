@@ -2,6 +2,8 @@ from flask import Flask, request, render_template
 import requests
 from dotenv import load_dotenv
 import os
+import time
+import logging
 
 # Load API key from .env file
 load_dotenv()
@@ -10,6 +12,8 @@ app = Flask(__name__)
 
 # Get your OpenRouter API key
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+logging.basicConfig(level=logging.INFO)
 
 
 # 🔽 🔽 🔽 PUT YOUR CUSTOM PROMPT STRUCTURE HERE 🔽 🔽 🔽
@@ -108,6 +112,56 @@ Follow the exact structure and keep it clear and concise.
 # 🔼 🔼 🔼 DO NOT EDIT BELOW THIS LINE UNLESS NEEDED 🔼 🔼 🔼
 
 
+def call_openrouter_with_retries(prompt, max_retries=5, base_delay=1.0):
+    if not OPENROUTER_API_KEY:
+        raise RuntimeError("OPENROUTER_API_KEY is not set in environment")
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "deepseek/deepseek-r1:free",
+        "messages": [
+            {"role": "system", "content": "You are a helpful AI that formats user ideas into structured prompts."},
+            {"role": "user", "content": prompt}
+        ]
+    }
+
+    attempt = 0
+    while attempt < max_retries:
+        attempt += 1
+        try:
+            resp = requests.post(url=url, headers=headers, json=payload, timeout=30)
+            if resp.status_code == 429:
+                # Rate limited: respect Retry-After if provided
+                retry_after = resp.headers.get("Retry-After")
+                wait = float(retry_after) if retry_after and retry_after.isdigit() else base_delay * (2 ** (attempt - 1))
+                logging.warning("Rate limited (429). Attempt %d/%d. Waiting %.1f seconds.", attempt, max_retries, wait)
+                time.sleep(wait)
+                continue
+            if 500 <= resp.status_code < 600:
+                # Transient server error: exponential backoff
+                wait = base_delay * (2 ** (attempt - 1))
+                logging.warning("Server error %d. Attempt %d/%d. Waiting %.1f seconds.", resp.status_code, attempt, max_retries, wait)
+                time.sleep(wait)
+                continue
+
+            resp.raise_for_status()
+            return resp.json()
+
+        except requests.RequestException as e:
+            # Non-HTTP exception (connection, timeout, etc.)
+            wait = base_delay * (2 ** (attempt - 1))
+            logging.warning("Request error: %s. Attempt %d/%d. Waiting %.1f seconds.", str(e), attempt, max_retries, wait)
+            time.sleep(wait)
+            continue
+
+    # If we exit the loop, all retries failed
+    raise RuntimeError(f"Failed to get successful response after {max_retries} attempts")
+
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     result = None
@@ -117,25 +171,8 @@ def index():
         prompt = build_prompt(user_idea)
 
         try:
-            response = requests.post(
-                url="https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "deepseek/deepseek-chat-v3-0324:free",
-                    "messages": [
-                        {"role": "system", "content": "You are a helpful AI that formats user ideas into structured prompts."},
-                        {"role": "user", "content": prompt}
-                    ]
-                }
-            )
-
-            response.raise_for_status()
-            data = response.json()
+            data = call_openrouter_with_retries(prompt)
             result = data["choices"][0]["message"]["content"]
-
         except Exception as e:
             result = f"Error: {str(e)}"
 
