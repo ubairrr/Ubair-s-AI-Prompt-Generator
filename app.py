@@ -5,18 +5,15 @@ import os
 import time
 import logging
 
-# Load API key from .env file
 load_dotenv()
 
 app = Flask(__name__)
 
-# Get your OpenRouter API key
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 logging.basicConfig(level=logging.INFO)
 
-
-# 🔽 🔽 🔽 PUT YOUR CUSTOM PROMPT STRUCTURE HERE 🔽 🔽 🔽
+# CUSTOM PROMPT STRUCTURE
 def build_prompt(user_idea):
     return f"""
 You are a master-level AI prompt optimization specialist. Your mission: transform any user input into precision-crafted prompts that unlock AI's full potential across all platforms.
@@ -109,8 +106,6 @@ Here is the idea -:
 
 Follow the exact structure and keep it clear and concise.
 """
-# 🔼 🔼 🔼 DO NOT EDIT BELOW THIS LINE UNLESS NEEDED 🔼 🔼 🔼
-
 
 def call_openrouter_with_retries(prompt, max_retries=5, base_delay=1.0):
     if not OPENROUTER_API_KEY:
