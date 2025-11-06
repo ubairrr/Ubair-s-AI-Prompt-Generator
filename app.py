@@ -117,7 +117,7 @@ def call_openrouter_with_retries(prompt, max_retries=5, base_delay=1.0):
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "deepseek/deepseek-r1:free",
+        "model": "tngtech/deepseek-r1t-chimera:free",
         "messages": [
             {"role": "system", "content": "You are a helpful AI that formats user ideas into structured prompts."},
             {"role": "user", "content": prompt}
