@@ -10,8 +10,11 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Get your OpenRouter API key
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+# Get your Gemini API key
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+from flask import Response, stream_with_context
+import json
 
 logging.basicConfig(level=logging.INFO)
 
@@ -53,17 +56,10 @@ You are a master-level AI prompt optimization specialist. Your mission: transfor
 
 **Advanced:** Chain-of-thought, few-shot learning, multi-perspective analysis, constraint optimization
 
-**Platform Notes:**
-- **ChatGPT/GPT-4:** Structured sections, conversation starters
-- **Claude:** Longer context, reasoning frameworks
-- **Gemini:** Creative tasks, comparative analysis
-- **Others:** Apply universal best practices
-
 ## OPERATING MODES
 
 **DETAIL MODE:** 
 - Gather context with smart defaults
-- Ask 2-3 targeted clarifying questions
 - Provide comprehensive optimization
 
 **BASIC MODE:**
@@ -71,17 +67,7 @@ You are a master-level AI prompt optimization specialist. Your mission: transfor
 - Apply core techniques only
 - Deliver ready-to-use prompt
 
-## RESPONSE FORMATS
 
-**Simple Requests:**
-```
-Your Optimized Prompt:
-[Improved prompt]
-
-What Changed: [Key improvements]
-```
-
-**Complex Requests:**
 ```
 Your Optimized Prompt:
 [Improved prompt]
@@ -102,31 +88,32 @@ Pro Tip: [Usage guidance]
 2. Auto detect mode protocol
 3. Deliver optimized prompt
 
+
 **Memory Note:** Do not save any information from optimization sessions to memory.
 Here is the idea -:
 
 "{user_idea}"
 
 Follow the exact structure and keep it clear and concise.
+
+**CRITICAL OUTPUT RULE:** You MUST wrap ONLY the final optimized prompt between the exact delimiters <<<PROMPT>>> and <<<END>>>. Everything outside these delimiters (explanations, key improvements, tips) should NOT be inside them. Only the ready-to-use prompt goes between these markers.
 """
 # 🔼 🔼 🔼 DO NOT EDIT BELOW THIS LINE UNLESS NEEDED 🔼 🔼 🔼
 
 
-def call_openrouter_with_retries(prompt, max_retries=5, base_delay=1.0):
-    if not OPENROUTER_API_KEY:
-        raise RuntimeError("OPENROUTER_API_KEY is not set in environment")
+def call_gemini_with_retries(prompt, max_retries=5, base_delay=1.0):
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY is not set in environment")
 
-    url = "https://openrouter.ai/api/v1/chat/completions"
+    # Using the Gemini 2.5 Flash model
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "deepseek/deepseek-r1:free",
-        "messages": [
-            {"role": "system", "content": "You are a helpful AI that formats user ideas into structured prompts."},
-            {"role": "user", "content": prompt}
-        ]
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
     }
 
     attempt = 0
@@ -162,21 +149,97 @@ def call_openrouter_with_retries(prompt, max_retries=5, base_delay=1.0):
     raise RuntimeError(f"Failed to get successful response after {max_retries} attempts")
 
 
-@app.route('/', methods=['GET', 'POST'])
+def parse_sections(text):
+    """Parse LLM response text into named sections."""
+    import re
+    sections = {
+        "prompt": None,
+        "improvements": None,
+        "techniques": None,
+        "tip": None,
+    }
+    if not text or text.startswith("Error:"):
+        return sections
+
+    # Extract the optimized prompt between <<<PROMPT>>> and <<<END>>>
+    prompt_match = re.search(r'<<<PROMPT>>>\s*\n?([\s\S]*?)<<<END>>>', text)
+    if prompt_match:
+        sections["prompt"] = prompt_match.group(1).strip()
+
+    # Extract Key Improvements section
+    improvements_match = re.search(
+        r'Key Improvements?:\s*\n([\s\S]*?)(?=\n\n(?:Techniques?|Pro Tip|$)|\Z)',
+        text, re.IGNORECASE
+    )
+    if improvements_match:
+        sections["improvements"] = improvements_match.group(1).strip()
+
+    # Extract Techniques Applied section
+    techniques_match = re.search(
+        r'Techniques? Applied:\s*\n?([\s\S]*?)(?=\n\n(?:Pro Tip|$)|\Z)',
+        text, re.IGNORECASE
+    )
+    if techniques_match:
+        sections["techniques"] = techniques_match.group(1).strip()
+
+    # Extract Pro Tip section
+    tip_match = re.search(
+        r'Pro Tip:\s*\n?([\s\S]*?)(?:\n\n|\Z)',
+        text, re.IGNORECASE
+    )
+    if tip_match:
+        sections["tip"] = tip_match.group(1).strip()
+
+    return sections
+
+
+def stream_gemini(prompt):
+    if not GEMINI_API_KEY:
+        yield f"data: {json.dumps({'error': 'GEMINI_API_KEY is not set'})}\n\n"
+        return
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key={GEMINI_API_KEY}"
+    headers = {"Content-Type": "application/json"}
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+
+    try:
+        with requests.post(url, headers=headers, json=payload, stream=True, timeout=60) as resp:
+            resp.raise_for_status()
+            for line in resp.iter_lines():
+                if line:
+                    decoded = line.decode('utf-8')
+                    if decoded.startswith('data: '):
+                        data_str = decoded[6:]
+                        if data_str == '[DONE]':
+                            continue
+                        try:
+                            data_json = json.loads(data_str)
+                            cands = data_json.get('candidates', [])
+                            if cands:
+                                parts = cands[0].get('content', {}).get('parts', [])
+                                if parts:
+                                    text_chunk = parts[0].get('text', '')
+                                    if text_chunk:
+                                        yield f"data: {json.dumps({'text': text_chunk})}\n\n"
+                        except json.JSONDecodeError:
+                            pass
+    except Exception as e:
+        logging.error(f"Streaming error: {e}")
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+@app.route('/api/generate', methods=['POST'])
+def generate_api():
+    data = request.get_json()
+    user_idea = data.get('idea', '')
+    if not user_idea:
+        return {"error": "No idea provided"}, 400
+    prompt = build_prompt(user_idea)
+    return Response(stream_with_context(stream_gemini(prompt)), mimetype='text/event-stream')
+
+
+@app.route('/', methods=['GET'])
 def index():
-    result = None
-
-    if request.method == 'POST':
-        user_idea = request.form.get('idea')
-        prompt = build_prompt(user_idea)
-
-        try:
-            data = call_openrouter_with_retries(prompt)
-            result = data["choices"][0]["message"]["content"]
-        except Exception as e:
-            result = f"Error: {str(e)}"
-
-    return render_template('index.html', result=result)
+    return render_template('index.html', result=None, sections=None)
 
 
 if __name__ == '__main__':
