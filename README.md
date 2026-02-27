@@ -12,6 +12,13 @@
 
 <br/>
 
+<div align="center">
+  <p><b>🌐 Live Demo: <a href="https://ubair-s-ai-prompt-generator.onrender.com">https://ubair-s-ai-prompt-generator.onrender.com</a></b></p>
+  <img src="assets/app_snapshot.png" alt="AI Prompt Studio Preview" width="800">
+</div>
+
+<br/>
+
 ## 📖 Overview
 
 **AI Prompt Studio** is a powerful web-based application built with Flask that takes your basic ideas and turns them into highly optimized, master-level AI prompts. Powered by **Google's Gemini 2.5 Flash API**, it acts as your personal prompt engineering specialist, ensuring you get the absolute best performance out of any LLM you use.
