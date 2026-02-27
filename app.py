@@ -5,7 +5,6 @@ import os
 import time
 import logging
 
-# Load API key from .env file
 load_dotenv()
 
 app = Flask(__name__)
@@ -18,8 +17,7 @@ import json
 
 logging.basicConfig(level=logging.INFO)
 
-
-# 🔽 🔽 🔽 PUT YOUR CUSTOM PROMPT STRUCTURE HERE 🔽 🔽 🔽
+# CUSTOM PROMPT STRUCTURE
 def build_prompt(user_idea):
     return f"""
 You are a master-level AI prompt optimization specialist. Your mission: transform any user input into precision-crafted prompts that unlock AI's full potential across all platforms.
@@ -98,8 +96,6 @@ Follow the exact structure and keep it clear and concise.
 
 **CRITICAL OUTPUT RULE:** You MUST wrap ONLY the final optimized prompt between the exact delimiters <<<PROMPT>>> and <<<END>>>. Everything outside these delimiters (explanations, key improvements, tips) should NOT be inside them. Only the ready-to-use prompt goes between these markers.
 """
-# 🔼 🔼 🔼 DO NOT EDIT BELOW THIS LINE UNLESS NEEDED 🔼 🔼 🔼
-
 
 def call_gemini_with_retries(prompt, max_retries=5, base_delay=1.0):
     if not GEMINI_API_KEY:
